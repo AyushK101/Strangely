@@ -41,3 +41,7 @@ WebRTC signaling events carried by WebSocket:
 - `webrtc.offer` and `webrtc.answer` include `sessionId`, `fromPeerId`, and `sdp`.
 - `webrtc.iceCandidate` includes `sessionId`, `fromPeerId`, and candidate details.
 - On `control.disconnect`, `control.skip`, or socket close, server removes session membership deterministically and notifies counterpart when connected.
+- `control.skip` transitions the skipping peer back into matchmaking with an incremented retry count after the current session is torn down.
+- `control.retry` transitions the peer into matchmaking again using the supplied attempt counter and notifies the prior counterpart when the retry is sourced from an active session.
+- Queue tickets and stale sessions expire through periodic server maintenance and emit `control.timeout` to any still-connected peers.
+- The client state machine tracks `connect`, `matchFound`, `offer`, `answer`, `iceCandidate`, retry, reconnect, timeout, and teardown transitions for UX and telemetry.

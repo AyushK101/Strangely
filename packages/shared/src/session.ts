@@ -16,3 +16,8 @@ export interface MatchTicket {
   createdAtMs: number;
   retryCount: number;
 }
+
+export interface SessionRetryCounts {
+  firstRetryCount: number;
+  secondRetryCount: number;
+}

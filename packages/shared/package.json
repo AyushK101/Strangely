@@ -15,12 +15,14 @@
     "dev": "tsc -w -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "echo 'shared: add eslint config to enable linting'"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2"
   }
 }

@@ -11,21 +11,21 @@
 ## Phase 1: Shared Contract Hardening
 
 - [x] Add schema coverage for all control and signaling payloads.
-- [ ] Add contract tests for envelope versioning and discriminated union integrity.
+- [x] Add contract tests for envelope versioning and discriminated union integrity.
 
 ## Phase 2: Server Signaling + Matchmaking
 
-- [ ] Add idempotent matchmaking queue transitions.
-- [ ] Add timeout policies and stale session cleanup.
-- [ ] Add retry and skip flow semantics with explicit state transitions.
+- [x] Add idempotent matchmaking queue transitions.
+- [x] Add timeout policies and stale session cleanup.
+- [x] Add retry and skip flow semantics with explicit state transitions.
 
 ## Phase 3: Client WebRTC Lifecycle
 
-- [ ] Implement peer state machine for connect/match/offer/answer/ICE/teardown.
-- [ ] Implement reconnect and retry UX behavior.
-- [ ] Add telemetry hooks for lifecycle events.
+- [x] Implement peer state machine for connect/match/offer/answer/ICE/teardown.
+- [x] Implement reconnect and retry UX behavior.
+- [x] Add telemetry hooks for lifecycle events.
 
 ## Phase 4: Verification
 
-- [ ] Add typecheck/lint/test CI workflow.
-- [ ] Add e2e smoke path for connect -> match -> signal relay -> teardown.
+- [x] Add typecheck/lint/test CI workflow.
+- [x] Add integrated smoke coverage for connect -> match -> signal relay -> teardown across server WebSocket integration and client lifecycle reducer tests.

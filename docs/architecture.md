@@ -29,3 +29,9 @@ The baseline scaffolding models these lifecycle concerns:
 - Client modules should include WebSocket client, peer lifecycle orchestration, and UI state.
 - Server modules should include socket event ingestion, queue matching, and session registry.
 - Shared modules should remain pure contracts/schemas without app runtime side effects.
+
+## Lifecycle State Ownership
+
+- Client owns the peer lifecycle state machine, lifecycle telemetry, and reconnect/retry UX.
+- Server owns idempotent queue transitions, session timeout cleanup, and deterministic teardown notifications.
+- Shared contracts define the versioned envelope and discriminated signaling/control payloads used by both sides.

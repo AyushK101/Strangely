@@ -5,6 +5,8 @@ export interface SessionRecord {
   firstPeerId: PeerId;
   secondPeerId: PeerId;
   createdAtMs: number;
+  firstRetryCount: number;
+  secondRetryCount: number;
 }
 
 export class SessionRegistry {
@@ -49,5 +51,20 @@ export class SessionRegistry {
     }
 
     return this.remove(sessionId);
+  }
+
+  purgeOlderThan(nowMs: number, maxAgeMs: number): SessionRecord[] {
+    const staleSessions: SessionRecord[] = [];
+
+    for (const [sessionId, record] of this.byId.entries()) {
+      if (nowMs - record.createdAtMs < maxAgeMs) {
+        continue;
+      }
+
+      staleSessions.push(record);
+      this.remove(sessionId);
+    }
+
+    return staleSessions;
   }
 }
