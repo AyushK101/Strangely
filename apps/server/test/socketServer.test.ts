@@ -13,6 +13,12 @@ import {
 import { SessionRegistry } from "../src/sessions/sessionRegistry.js";
 import { createSocketServer } from "../src/signaling/socketServer.js";
 
+type SignalEventType = SignalEnvelopeInput["type"];
+type SignalEnvelopeByType<TType extends SignalEventType> = Extract<
+  SignalEnvelopeInput,
+  { type: TType }
+>;
+
 function waitForOpen(socket: WebSocket): Promise<void> {
   if (socket.readyState === WebSocket.OPEN) {
     return Promise.resolve();
@@ -24,11 +30,11 @@ function waitForOpen(socket: WebSocket): Promise<void> {
   });
 }
 
-function waitForEnvelope(
+function waitForEnvelope<TType extends SignalEventType>(
   socket: WebSocket,
-  predicate: (envelope: SignalEnvelopeInput) => boolean,
+  eventType: TType,
   timeoutMs = 1_000,
-): Promise<SignalEnvelopeInput> {
+): Promise<SignalEnvelopeByType<TType>> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       socket.off("message", onMessage);
@@ -48,13 +54,13 @@ function waitForEnvelope(
                   ? Buffer.from(data).toString("utf8")
                   : String(data);
         const envelope = JSON.parse(text) as SignalEnvelopeInput;
-        if (!predicate(envelope)) {
+        if (envelope.type !== eventType) {
           return;
         }
 
         clearTimeout(timeout);
         socket.off("message", onMessage);
-        resolve(envelope);
+        resolve(envelope as SignalEnvelopeByType<TType>);
       } catch (error) {
         clearTimeout(timeout);
         socket.off("message", onMessage);
@@ -113,14 +119,8 @@ test("connect, match, signal relay, and teardown smoke path", async () => {
   try {
     await Promise.all([waitForOpen(peerA), waitForOpen(peerB)]);
 
-    const matchA = waitForEnvelope(
-      peerA,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
-    const matchB = waitForEnvelope(
-      peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
+    const matchA = waitForEnvelope(peerA, CONTROL_EVENT.MATCH_FOUND);
+    const matchB = waitForEnvelope(peerB, CONTROL_EVENT.MATCH_FOUND);
 
     sendConnect(peerA, "peer-a");
     sendConnect(peerB, "peer-b");
@@ -145,7 +145,7 @@ test("connect, match, signal relay, and teardown smoke path", async () => {
 
     const relayedOffer = await waitForEnvelope(
       peerB,
-      (envelope) => envelope.type === WEBRTC_SIGNAL_EVENT.OFFER,
+      WEBRTC_SIGNAL_EVENT.OFFER,
     );
     assert.equal(relayedOffer.payload.fromPeerId, "peer-a");
 
@@ -161,7 +161,7 @@ test("connect, match, signal relay, and teardown smoke path", async () => {
 
     const relayedAnswer = await waitForEnvelope(
       peerA,
-      (envelope) => envelope.type === WEBRTC_SIGNAL_EVENT.ANSWER,
+      WEBRTC_SIGNAL_EVENT.ANSWER,
     );
     assert.equal(relayedAnswer.payload.fromPeerId, "peer-b");
 
@@ -176,7 +176,7 @@ test("connect, match, signal relay, and teardown smoke path", async () => {
 
     const disconnectNotice = await waitForEnvelope(
       peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.DISCONNECT,
+      CONTROL_EVENT.DISCONNECT,
     );
     assert.equal(disconnectNotice.payload.peerId, "peer-a");
     assert.equal(disconnectNotice.payload.reason, "client_left");
@@ -200,14 +200,8 @@ test("skip requeues the skipping peer and notifies the counterpart", async () =>
       waitForOpen(peerC),
     ]);
 
-    const initialMatchA = waitForEnvelope(
-      peerA,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
-    const initialMatchB = waitForEnvelope(
-      peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
+    const initialMatchA = waitForEnvelope(peerA, CONTROL_EVENT.MATCH_FOUND);
+    const initialMatchB = waitForEnvelope(peerB, CONTROL_EVENT.MATCH_FOUND);
 
     sendConnect(peerA, "skip-a");
     sendConnect(peerB, "skip-b");
@@ -218,18 +212,9 @@ test("skip requeues the skipping peer and notifies the counterpart", async () =>
     ]);
     assert.equal(matchedA.payload.sessionId, matchedB.payload.sessionId);
 
-    const skipNotice = waitForEnvelope(
-      peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.SKIP,
-    );
-    const rematchA = waitForEnvelope(
-      peerA,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
-    const rematchC = waitForEnvelope(
-      peerC,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
+    const skipNotice = waitForEnvelope(peerB, CONTROL_EVENT.SKIP);
+    const rematchA = waitForEnvelope(peerA, CONTROL_EVENT.MATCH_FOUND);
+    const rematchC = waitForEnvelope(peerC, CONTROL_EVENT.MATCH_FOUND);
 
     peerA.send(
       JSON.stringify(
@@ -273,14 +258,8 @@ test("retry preserves the attempt counter and requeues the peer", async () => {
       waitForOpen(peerC),
     ]);
 
-    const initialMatchA = waitForEnvelope(
-      peerA,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
-    const initialMatchB = waitForEnvelope(
-      peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
+    const initialMatchA = waitForEnvelope(peerA, CONTROL_EVENT.MATCH_FOUND);
+    const initialMatchB = waitForEnvelope(peerB, CONTROL_EVENT.MATCH_FOUND);
 
     sendConnect(peerA, "retry-a");
     sendConnect(peerB, "retry-b");
@@ -291,18 +270,9 @@ test("retry preserves the attempt counter and requeues the peer", async () => {
     ]);
     assert.equal(matchedA.payload.sessionId, matchedB.payload.sessionId);
 
-    const retryNotice = waitForEnvelope(
-      peerB,
-      (envelope) => envelope.type === CONTROL_EVENT.RETRY,
-    );
-    const rematchA = waitForEnvelope(
-      peerA,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
-    const rematchC = waitForEnvelope(
-      peerC,
-      (envelope) => envelope.type === CONTROL_EVENT.MATCH_FOUND,
-    );
+    const retryNotice = waitForEnvelope(peerB, CONTROL_EVENT.RETRY);
+    const rematchA = waitForEnvelope(peerA, CONTROL_EVENT.MATCH_FOUND);
+    const rematchC = waitForEnvelope(peerC, CONTROL_EVENT.MATCH_FOUND);
 
     peerA.send(
       JSON.stringify(
