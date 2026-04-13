@@ -53,6 +53,18 @@ export function App() {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const connected = useMemo(() => stage === "connected", [stage]);
+  const stageLabel = useMemo(() => {
+    if (stage === "idle") {
+      return "Idle";
+    }
+    if (stage === "searching") {
+      return "Searching";
+    }
+    if (stage === "matched") {
+      return "Matched";
+    }
+    return "Connected";
+  }, [stage]);
 
   useEffect(() => {
     if (remoteVideoRef.current) {
@@ -445,8 +457,11 @@ export function App() {
   return (
     <main className="omegle-shell">
       <header className="topbar">
-        <h1>Strangely</h1>
-        <p>Find a stranger. Talk with video, audio, and chat.</p>
+        <div className="topbar-row">
+          <h1>Strangely</h1>
+          <span className="stage-pill">{stageLabel}</span>
+        </div>
+        <p>Anonymous one-on-one video chat. Find, connect, and move on.</p>
       </header>
 
       <section className="controls">
@@ -455,7 +470,7 @@ export function App() {
           className="primary"
           onClick={() => void findStranger()}
         >
-          Find
+          Find Stranger
         </button>
         <button
           type="button"
@@ -491,7 +506,9 @@ export function App() {
         <h2>Chat</h2>
         <div className="chat-feed">
           {messages.length === 0 ? (
-            <p className="placeholder">No messages yet.</p>
+            <p className="placeholder">
+              Messages appear here once the data channel is open.
+            </p>
           ) : (
             messages.map((message) => (
               <p key={message.id} className={`msg msg-${message.from}`}>
