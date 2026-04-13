@@ -10,7 +10,7 @@
 
 ## Phase 1: Shared Contract Hardening
 
-- [ ] Add schema coverage for all control and signaling payloads.
+- [x] Add schema coverage for all control and signaling payloads.
 - [ ] Add contract tests for envelope versioning and discriminated union integrity.
 
 ## Phase 2: Server Signaling + Matchmaking

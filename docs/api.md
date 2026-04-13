@@ -32,9 +32,12 @@ WebRTC signaling events carried by WebSocket:
 - Server validates/routs control and signaling metadata messages.
 - Client applies offer/answer/ICE to browser `RTCPeerConnection`.
 - Media/data packets flow directly peer-to-peer over WebRTC, not through server.
+- Server derives signaling sender identity from socket-bound context and does not trust client-supplied `peerId`/`fromPeerId` for relay decisions.
+- Server drops malformed envelopes and invalid payloads before event handling.
 
 ## Initial Contract Notes
 
 - `control.matchFound` includes `sessionId`, `localPeerId`, and `remotePeerId`.
 - `webrtc.offer` and `webrtc.answer` include `sessionId`, `fromPeerId`, and `sdp`.
 - `webrtc.iceCandidate` includes `sessionId`, `fromPeerId`, and candidate details.
+- On `control.disconnect`, `control.skip`, or socket close, server removes session membership deterministically and notifies counterpart when connected.
