@@ -20,6 +20,14 @@ interface ChatMessage {
   from: "me" | "stranger" | "system";
 }
 
+interface WorkflowStep {
+  title: string;
+  label: string;
+  description: string;
+  tone: "blue" | "pink" | "red";
+  active: boolean;
+}
+
 const SIGNALING_URL =
   import.meta.env.VITE_SIGNALING_URL ?? "ws://localhost:8080";
 
@@ -64,6 +72,61 @@ export function App() {
       return "Matched";
     }
     return "Connected";
+  }, [stage]);
+
+  const stageTone = useMemo(() => {
+    if (stage === "idle") {
+      return "blue";
+    }
+    if (stage === "searching") {
+      return "blue";
+    }
+    if (stage === "matched") {
+      return "pink";
+    }
+    return "red";
+  }, [stage]);
+
+  const workflowSteps = useMemo<WorkflowStep[]>(
+    () => [
+      {
+        title: "Discover",
+        label: "Step 01",
+        description: "Open the signaling socket and request a match.",
+        tone: "blue",
+        active: stage === "idle" || stage === "searching",
+      },
+      {
+        title: "Negotiate",
+        label: "Step 02",
+        description: "Exchange offer, answer, and ICE candidates.",
+        tone: "pink",
+        active: stage === "matched",
+      },
+      {
+        title: "Chat",
+        label: "Step 03",
+        description: "Use the data channel for fast, private messages.",
+        tone: "red",
+        active: stage === "connected",
+      },
+    ],
+    [stage],
+  );
+
+  const messageCount = messages.length;
+
+  const statusSummary = useMemo(() => {
+    if (stage === "idle") {
+      return "Ready when you are.";
+    }
+    if (stage === "searching") {
+      return "Looking for the next available peer.";
+    }
+    if (stage === "matched") {
+      return "Setting up the peer connection.";
+    }
+    return "Live over WebRTC data channel.";
   }, [stage]);
 
   useEffect(() => {
@@ -455,94 +518,184 @@ export function App() {
   }
 
   return (
-    <main className="omegle-shell">
-      <header className="topbar">
-        <div className="topbar-row">
-          <h1>Strangely</h1>
-          <span className="stage-pill">{stageLabel}</span>
+    <main className="app-shell">
+      <header className="hero-card">
+        <div className="hero-copy">
+          <div className="hero-kicker-row">
+            <span className="brand-lockup">Strangely</span>
+            <span className={`status-pill status-pill-${stageTone}`}>
+              {stageLabel}
+            </span>
+          </div>
+          <h1>
+            Anonymous chat with a disciplined, client-side connection flow.
+          </h1>
+          <p>
+            Find a stranger, negotiate the peer connection over WebSocket
+            signaling, and keep video, audio, and chat inside the browser.
+          </p>
+
+          <div className="hero-actions">
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => void findStranger()}
+            >
+              Find Stranger
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={nextStranger}
+              disabled={stage === "idle"}
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              className="button button-danger"
+              onClick={stopChat}
+              disabled={stage === "idle"}
+            >
+              Stop
+            </button>
+          </div>
+
+          <div className="hero-metrics">
+            <article className="metric-card">
+              <span className="metric-label">Status</span>
+              <strong>{statusSummary}</strong>
+              <p>{status}</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Messages</span>
+              <strong>{messageCount}</strong>
+              <p>Sent through the data channel.</p>
+            </article>
+            <article className="metric-card">
+              <span className="metric-label">Local peer</span>
+              <strong>{localPeerIdRef.current}</strong>
+              <p>Generated on the client.</p>
+            </article>
+          </div>
         </div>
-        <p>Anonymous one-on-one video chat. Find, connect, and move on.</p>
+
+        <aside className="workflow-panel">
+          <div className="panel-heading-row">
+            <div>
+              <span className="panel-kicker">Connection pipeline</span>
+              <h2>Three steps from discovery to chat.</h2>
+            </div>
+            <span className="mini-pill">WebRTC</span>
+          </div>
+
+          <div className="workflow-list">
+            {workflowSteps.map((step) => (
+              <article
+                key={step.title}
+                className={`workflow-step workflow-step-${step.tone} ${
+                  step.active ? "is-active" : ""
+                }`}
+              >
+                <span className="workflow-label">{step.label}</span>
+                <strong>{step.title}</strong>
+                <p>{step.description}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="workflow-footnote">
+            <span>Signal URL</span>
+            <strong>{SIGNALING_URL}</strong>
+          </div>
+        </aside>
       </header>
 
-      <section className="controls">
-        <button
-          type="button"
-          className="primary"
-          onClick={() => void findStranger()}
-        >
-          Find Stranger
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          onClick={nextStranger}
-          disabled={stage === "idle"}
-        >
-          Next
-        </button>
-        <button
-          type="button"
-          className="danger"
-          onClick={stopChat}
-          disabled={stage === "idle"}
-        >
-          Stop
-        </button>
-        <span className="status">{status}</span>
-      </section>
+      <section className="content-grid">
+        <article className="panel panel-video">
+          <div className="panel-heading-row">
+            <div>
+              <span className="panel-kicker">Media plane</span>
+              <h2>Local and remote video surfaces.</h2>
+            </div>
+            <span
+              className={connected ? "mini-pill mini-pill-live" : "mini-pill"}
+            >
+              {connected ? "Live" : "Waiting"}
+            </span>
+          </div>
 
-      <section className="video-grid">
-        <article className="video-card">
-          <h2>You</h2>
-          <video ref={localVideoRef} autoPlay muted playsInline />
+          <div className="video-grid">
+            <article className="video-card">
+              <div className="card-caption-row">
+                <h3>You</h3>
+                <span className="card-caption">Muted preview</span>
+              </div>
+              <video ref={localVideoRef} autoPlay muted playsInline />
+            </article>
+            <article className="video-card">
+              <div className="card-caption-row">
+                <h3>Stranger</h3>
+                <span className="card-caption">Remote stream</span>
+              </div>
+              <video ref={remoteVideoRef} autoPlay playsInline />
+            </article>
+          </div>
         </article>
-        <article className="video-card">
-          <h2>Stranger</h2>
-          <video ref={remoteVideoRef} autoPlay playsInline />
-        </article>
-      </section>
 
-      <section className="chat-card">
-        <h2>Chat</h2>
-        <div className="chat-feed">
-          {messages.length === 0 ? (
-            <p className="placeholder">
-              Messages appear here once the data channel is open.
-            </p>
-          ) : (
-            messages.map((message) => (
-              <p key={message.id} className={`msg msg-${message.from}`}>
-                {message.from === "me"
-                  ? "You"
-                  : message.from === "stranger"
-                    ? "Stranger"
-                    : "System"}
-                : {message.text}
+        <article className="panel panel-chat">
+          <div className="panel-heading-row">
+            <div>
+              <span className="panel-kicker">Data channel</span>
+              <h2>Minimal text chat with clear state.</h2>
+            </div>
+            <span className="mini-pill">{canSendChat ? "Open" : "Closed"}</span>
+          </div>
+
+          <div className="chat-feed">
+            {messages.length === 0 ? (
+              <p className="placeholder">
+                Messages appear here once the data channel is open.
               </p>
-            ))
-          )}
-        </div>
-        <div className="chat-input-row">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(event) => setChatInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                sendChatMessage();
-              }
-            }}
-            placeholder="Type a message"
-            disabled={!connected || !canSendChat}
-          />
-          <button
-            type="button"
-            onClick={sendChatMessage}
-            disabled={!connected || !canSendChat}
-          >
-            Send
-          </button>
-        </div>
+            ) : (
+              messages.map((message) => (
+                <p key={message.id} className={`msg msg-${message.from}`}>
+                  <span className="msg-label">
+                    {message.from === "me"
+                      ? "You"
+                      : message.from === "stranger"
+                        ? "Stranger"
+                        : "System"}
+                  </span>
+                  <span className="msg-text">{message.text}</span>
+                </p>
+              ))
+            )}
+          </div>
+
+          <div className="chat-input-row">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(event) => setChatInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  sendChatMessage();
+                }
+              }}
+              placeholder="Type a message"
+              disabled={!connected || !canSendChat}
+            />
+            <button
+              type="button"
+              className="button button-primary button-send"
+              onClick={sendChatMessage}
+              disabled={!connected || !canSendChat}
+            >
+              Send
+            </button>
+          </div>
+        </article>
       </section>
     </main>
   );

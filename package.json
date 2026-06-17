@@ -10,5 +10,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test"
+  },
+  "devDependencies": {
+    "nx": "^22.7.1"
   }
 }
