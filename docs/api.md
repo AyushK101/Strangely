@@ -45,3 +45,22 @@ WebRTC signaling events carried by WebSocket:
 - `control.retry` transitions the peer into matchmaking again using the supplied attempt counter and notifies the prior counterpart when the retry is sourced from an active session.
 - Queue tickets and stale sessions expire through periodic server maintenance and emit `control.timeout` to any still-connected peers.
 - The client state machine tracks `connect`, `matchFound`, `offer`, `answer`, `iceCandidate`, retry, reconnect, timeout, and teardown transitions for UX and telemetry.
+
+## Diagram
+
+```mermaid
+flowchart TB
+  E[Envelope]
+  C[Control events]
+  W[WebRTC signaling events]
+  S[Server]
+  B[Browser client]
+
+  E --> C
+  E --> W
+  C --> S
+  W --> S
+  S --> B
+```
+
+This diagram keeps the contract boundary explicit: the envelope is shared, the server handles control and signaling relay, and the browser owns peer/media transport.

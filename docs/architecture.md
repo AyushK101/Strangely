@@ -35,3 +35,41 @@ The baseline scaffolding models these lifecycle concerns:
 - Client owns the peer lifecycle state machine, lifecycle telemetry, and reconnect/retry UX.
 - Server owns idempotent queue transitions, session timeout cleanup, and deterministic teardown notifications.
 - Shared contracts define the versioned envelope and discriminated signaling/control payloads used by both sides.
+
+## Diagrams
+
+System overview (flowchart)
+
+```mermaid
+flowchart LR
+  C[Browser]
+  S[Signaling server]
+  M[Matchmaker]
+  R[Remote peer]
+
+  C --> S
+  S --> M
+  C --> R
+```
+
+Signaling sequence (offer/answer + ICE)
+
+```mermaid
+sequenceDiagram
+  participant A as Client A
+  participant B as Client B
+  participant S as Signaling Server
+
+  A->>S: control.connect (peerId)
+  B->>S: control.connect (peerId)
+  S->>A: control.matchFound (sessionId, localPeerId, remotePeerId)
+  S->>B: control.matchFound (...)
+  A->>S: webrtc.offer (sessionId, fromPeerId, sdp)
+  S->>B: webrtc.offer (forwarded)
+  B->>S: webrtc.answer (sessionId, fromPeerId, sdp)
+  S->>A: webrtc.answer (forwarded)
+  A->>S: webrtc.iceCandidate (sessionId, candidate)
+  S->>B: webrtc.iceCandidate (forwarded)
+```
+
+These diagrams reinforce the separation of concerns: the server brokers control/signaling only; media and chat data are exchanged directly between browsers via WebRTC once negotiation completes.
